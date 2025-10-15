@@ -100,11 +100,38 @@ def generate_readme_content(
         lines.append("**Description**:")
         lines.append("")
         lines.append(description)
+    lines.append("")
     if members:
-        lines.append("")
         lines.append("**Members**:")
         for m in members:
             lines.append(f"- {m}")
+    else:
+        lines.append("**Members**: no one signed up yet!")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def generate_environment_md() -> str:
+    lines: List[str] = []
+    lines.append("# Environment")
+    lines.append("")
+    lines.append("This folder contains a minimal Python environment setup. If you haven't used the uv package manager yet, I highly recommend it!")
+    lines.append("")
+    lines.append("## Using pip")
+    lines.append("")
+    lines.append("```bash")
+    lines.append("python -m venv .venv")
+    lines.append("source .venv/bin/activate  # Windows: .venv\\Scripts\\activate")
+    lines.append("pip install -r requirements.txt")
+    lines.append("```")
+    lines.append("")
+    lines.append("## Using uv pip")
+    lines.append("")
+    lines.append("```bash")
+    lines.append("uv venv")
+    lines.append("source .venv/bin/activate  # Windows: .venv\\Scripts\\activate")
+    lines.append("uv pip install -r requirements.txt")
+    lines.append("```")
     lines.append("")
     return "\n".join(lines)
 
@@ -112,7 +139,7 @@ def generate_readme_content(
 def main() -> int:
     repo_root = Path(__file__).resolve().parent.parent
     signup_path = repo_root / "_signup_sheet" / "30 Days of Mapping Sign-up.xlsx"
-    output_root = repo_root / "challenges"
+    output_root = repo_root
 
     if not signup_path.exists():
         print(f"Signup sheet not found at: {signup_path}")
@@ -207,6 +234,20 @@ def main() -> int:
                 created_count += 1
             else:
                 updated_count += 1
+
+        # Per-challenge requirements.txt
+        requirements_path = folder_path / "requirements.txt"
+        requirements_content = "python>3.12\n"
+        existing_req = requirements_path.read_text(encoding="utf-8") if requirements_path.exists() else None
+        if existing_req != requirements_content:
+            requirements_path.write_text(requirements_content, encoding="utf-8")
+
+        # Per-challenge ENVIRONMENT.md
+        environment_md_path = folder_path / "ENVIRONMENT.md"
+        environment_md_content = generate_environment_md()
+        existing_env = environment_md_path.read_text(encoding="utf-8") if environment_md_path.exists() else None
+        if existing_env != environment_md_content:
+            environment_md_path.write_text(environment_md_content, encoding="utf-8")
 
     print(
         f"Generation complete. Created {created_count} new README(s), updated {updated_count} README(s)."

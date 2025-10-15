@@ -40,7 +40,10 @@ jobs:
           branch: chore/generate-challenges
           title: 'Generate challenge folders & READMEs from signup sheet'
           body: |
-            This PR was created automatically by the workflow to generate one folder per challenge at the repository root and a README.md in each folder with date, title, description, and members.
+            This PR was created automatically by the workflow to generate one folder per challenge at the repository root with:
+            - README.md (date, title, description, members)
+            - requirements.txt (currently: python>3.12)
+            - ENVIRONMENT.md (pip and uv pip setup instructions)
           labels: |
             automation
             data-sync
