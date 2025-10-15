@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'signup/30 Days of Mapping Sign-up.xlsx'
+      - '_signup_sheet/30 Days of Mapping Sign-up.xlsx'
 
 permissions:
   contents: write
@@ -31,7 +31,7 @@ jobs:
 
       - name: Generate challenges from signup sheet
         run: |
-          python scripts/generate_challenges.py
+          python _scripts/generate_challenges.py
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
@@ -40,9 +40,7 @@ jobs:
           branch: chore/generate-challenges
           title: 'Generate challenge folders & READMEs from signup sheet'
           body: |
-            This PR was created automatically by the workflow to generate one folder per challenge under `challenges/` and a README.md in each folder with date, title, description, and members.
-          add-paths: |
-            challenges/**
+            This PR was created automatically by the workflow to generate one folder per challenge at the repository root and a README.md in each folder with date, title, description, and members.
           labels: |
             automation
             data-sync

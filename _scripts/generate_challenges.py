@@ -100,13 +100,11 @@ def generate_readme_content(
         lines.append("**Description**:")
         lines.append("")
         lines.append(description)
-    lines.append("")
     if members:
+        lines.append("")
         lines.append("**Members**:")
         for m in members:
             lines.append(f"- {m}")
-    else:
-        lines.append("**Members**: no one signed up yet!")
     lines.append("")
     return "\n".join(lines)
 
@@ -114,8 +112,7 @@ def generate_readme_content(
 def main() -> int:
     repo_root = Path(__file__).resolve().parent.parent
     signup_path = repo_root / "_signup_sheet" / "30 Days of Mapping Sign-up.xlsx"
-    # Write challenge folders at the repository root for ease of use
-    output_root = repo_root
+    output_root = repo_root / "challenges"
 
     if not signup_path.exists():
         print(f"Signup sheet not found at: {signup_path}")
