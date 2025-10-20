@@ -10,7 +10,7 @@ You need to submit your work at the latest <b> one day before </b> your assigned
 You will submit your work via a pull request to this GitHub repo. Please <b> only include items on the directory corresponding to your date </b>.
 
 You should include the following items in your submission:
-1. An image file `MAP.png` or `MAP.jpg` with your map.
+1. An image file `MAP.png/jpg/pdf/svg/html' with your map.
 2. A markdown file `BLUESKY.md` containing a short description of the map for the Bluesky post, and also including the handles of every authors who wishes to be mentioned. This has to be written in less than 300 characters. We will post it as a reply to the main map where we will include the day's themes and the credits, so don't worry about wasting characters on these items.
 3. (Optional, but highly encouraged!) A markdown file `DESCRIPTION.md` containg a longer description of the map for the website. This can be as long as one sentence more than the Bluesky post, or two pages. We would love for you to take this space to discuss not only the final product but also the process of creating a map. Some (very non-exhausting) prompts to consider are: why did you choose this theme? what were some difficulties you encountered while mapping? what aesthetic choices you felt heightened the power of your map? what you wish you could still work on? Format as you'd wish it to be displayed e.g. feel free to include images, headers, etc.
 4. (Optional) The code you used to produce the map, if applicable. We would like this exercise to also foster reproducible science. Anything from coding scripts to jupyter notebooks is welcome. Avoid, however, pushing large raw data files---rather, indicate on your DESCRIPTION.md file where you found the datasets.
