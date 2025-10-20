@@ -1,6 +1,26 @@
 # 30DoM-2025
 Repository for the group's 30 days of mapping work.
 
+## Instructions
+
+We will attempt to complete the challenge as a group! To claim a map (and date), sign up in the Google sheet we shared on Slack. Feel free to sign up as teams. Depending on interest we may encourage folks to team up or take up more than one map.
+
+You need to submit your work at the latest <b> one day before </b> your assigned map is due posting. This will allow us to format and schedule posts to social media and the website. We will post maps to BlueSky daily and to our website (and perhaps other platforms) on a weekly round-up.
+
+You will submit your work via a pull request to this GitHub repo. Please <b> only include items on the directory corresponding to your date </b>.
+
+You should include the following items in your submission:
+1. An image file `MAP.png` or `MAP.jpg` with your map.
+2. A markdown file `BLUESKY.md` containing a short description of the map for the Bluesky post, and also including the handles of every authors who wishes to be mentioned. This has to be written in less than 300 characters. We will post it as a reply to the main map where we will include the day's themes and the credits, so don't worry about wasting characters on these items.
+3. (Optional, but highly encouraged!) A markdown file `DESCRIPTION.md` containg a longer description of the map for the website. This can be as long as one sentence more than the Bluesky post, or two pages. We would love for you to take this space to discuss not only the final product but also the process of creating a map. Some (very non-exhausting) prompts to consider are: why did you choose this theme? what were some difficulties you encountered while mapping? what aesthetic choices you felt heightened the power of your map? what you wish you could still work on? Format as you'd wish it to be displayed e.g. feel free to include images, headers, etc.
+4. (Optional) The code you used to produce the map, if applicable. We would like this exercise to also foster reproducible science. Anything from coding scripts to jupyter notebooks is welcome. Avoid, however, pushing large raw data files---rather, indicate on your DESCRIPTION.md file where you found the datasets.
+
+Most importantly, have fun and take this as an opportunity to challenge yourself to make creative, insightful maps!
+
+## Themes
+
+Below you can find the full list of themes, copied from the [challenge homepage](https://30daymapchallenge.com):
+
 | Date       | Name                          | Description                                                                                                                                                                                     |
 |:-----------|:------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | 01-11-2025 | Points                        | Challenge Classic: Map with point data (e.g., individual locations, points of interest, clusters). Focus on effective symbolization and density visualization.                                  |
