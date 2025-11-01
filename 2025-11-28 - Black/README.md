@@ -6,4 +6,5 @@
 
 (Black Friday) Interpret the theme of Black. The map can be purely monochromatic, represent absence/darkness (e.g., light pollution), or relate to themes of consumption.
 
-**Members**: no one signed up yet!
+**Members**:
+- @sidhikabalachandar

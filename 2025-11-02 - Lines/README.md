@@ -6,4 +6,5 @@
 
 Challenge Classic: Map linear features (e.g., roads, rivers, migration paths, flow lines). Explore line thickness, color, and direction to convey information.
 
-**Members**: no one signed up yet!
+**Members**:
+- Yes

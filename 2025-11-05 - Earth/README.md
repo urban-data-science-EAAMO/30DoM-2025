@@ -6,4 +6,6 @@
 
 Classical Elements ¼: Focus on the tangible and grounded. Map landforms, geology, soil, agriculture, elevation, or anything solid beneath your feet.
 
-**Members**: no one signed up yet!
+**Members**:
+- @jennah-gosciak
+- Yes

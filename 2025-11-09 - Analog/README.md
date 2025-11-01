@@ -6,4 +6,7 @@
 
 Step away from the screen! Create your map using traditional methods (e.g., pen, pencil, paint, collage, physical models). Show the handmade process!
 
-**Members**: no one signed up yet!
+**Members**:
+- @annaloganmc
+- @tqueer (would love to collaborate / co-work!)
+- @chae-won-lee

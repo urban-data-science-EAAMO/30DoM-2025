@@ -6,4 +6,5 @@
 
 Challenge yourself to use the fewest possible elements (color, line weight, labels) while keeping the map clear, useful, and informative.
 
-**Members**: no one signed up yet!
+**Members**:
+- @kennylpeng

@@ -6,4 +6,5 @@
 
 Challenge Classic: Experimentation is key! Create your map using a software, language, library, or technique you have never used before.
 
-**Members**: no one signed up yet!
+**Members**:
+- Jessica Spencer
