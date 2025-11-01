@@ -6,4 +6,6 @@
 
 Challenge Classic: Create a map focused on area features (e.g., administrative regions, land use, boundaries). Use fills, patterns, and choropleth techniques.
 
-**Members**: no one signed up yet!
+**Members**:
+- @Navxihziq
+- Yes

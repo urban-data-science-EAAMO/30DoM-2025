@@ -6,4 +6,5 @@
 
 Start the timer! The maximum allowed time to design and produce this map is 10 minutes. Focus on speed, simplicity, and core communication.
 
-**Members**: no one signed up yet!
+**Members**:
+- @atmikapai13

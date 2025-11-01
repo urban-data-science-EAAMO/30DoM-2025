@@ -6,4 +6,5 @@
 
 Classical Elements ¾: Focus on energy, light, or transformation. Map heat, wildfires, energy consumption, population density at night, or volcanic activity.
 
-**Members**: no one signed up yet!
+**Members**:
+- @simanirakiza

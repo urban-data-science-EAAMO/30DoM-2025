@@ -6,4 +6,6 @@
 
 (World Urbanism Day) Map the built environment: dense street networks, highrises, urban sprawl, city infrastructure, or population density within a metro area.
 
-**Members**: no one signed up yet!
+**Members**:
+- @chae-won-lee
+- Yes

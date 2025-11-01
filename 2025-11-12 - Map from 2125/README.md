@@ -6,4 +6,5 @@
 
 How will maps look 100 years from now? Create a speculative map of what might be (or what you hope will be).
 
-**Members**: no one signed up yet!
+**Members**:
+- @Navxihziq
