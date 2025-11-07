@@ -1,0 +1,9 @@
+# macOS files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Python notebook
+.ipynb_checkpoints/
+*.ipynb_checkpoints
