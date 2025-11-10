@@ -1,0 +1,2 @@
+
+This map visualizes the presence of ladrilleras, or brick kilns, which emit pollution across the state. In this map, we softly overlap point locations of these ladrilleras across Mexico (downloaded from DENUE) and scores for proximity to these kilns across the country, computed as the total inverse distance each ladrillera. This score is presented for each 50km point across the country, presented on a log-scale. Data cleaned by Jacqueline Calderón and Lizet Jarquin at UASLP, map by @jfinocchiaro and Francisco Marmolejo-Cossío
