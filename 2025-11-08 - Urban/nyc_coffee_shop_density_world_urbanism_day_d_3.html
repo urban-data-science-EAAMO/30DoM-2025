@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NYC Coffee Shop Density — World Urbanism Day (D3)</title>
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --fg: #e6e9ef;
+      --muted: #9aa4b2;
+      --accent: #84cc16;
+      --panel: #13171c;
+    }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #0b0d10, #0e1116);
+      color: var(--fg);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+    header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #1f2630;
+      backdrop-filter: blur(6px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    h1 { font-size: clamp(18px, 2.6vw, 28px); margin: 0; letter-spacing: 0.2px; }
+    .sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
+    .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .btn {
+      background: var(--panel);
+      color: var(--fg);
+      border: 1px solid #1f2630;
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform .08s ease, background .2s ease, border .2s ease;
+      font-weight: 600;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: #293241; }
+    .btn.active { outline: 2px solid var(--accent); border-color: #2b2; }
+    .range { accent-color: var(--accent); }
+    .wrap { display: grid; grid-template-columns: 320px 1fr; gap: 14px; padding: 14px; }
+    aside {
+      background: var(--panel);
+      border: 1px solid #1f2630;
+      border-radius: 16px;
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+    .legend { height: 14px; border-radius: 8px; background: linear-gradient(90deg, #0d0887, #5b02a3, #9a179b, #cb4679, #ed7953, #fb9f3a, #fdca26, #f0f921); border: 1px solid #1f2630; }
+    .legend-labels { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-top: 4px; }
+    .note { color: var(--muted); font-size: 12px; line-height: 1.4; }
+    .map-panel { position: relative; background: #0b0d10; border: 1px solid #1f2630; border-radius: 16px; overflow: hidden; }
+    svg { display: block; width: 100%; height: 100%; }
+    .watermark { position: absolute; right: 12px; bottom: 10px; color: #8b95a3; font-size: 12px; backdrop-filter: blur(2px); background: rgba(0,0,0,.25); padding: 4px 8px; border-radius: 999px; border: 1px solid #1f2630; }
+    footer { color: var(--muted); padding: 10px 16px; font-size: 12px; border-top: 1px solid #1f2630; }
+    @media (max-width: 900px) {
+      .wrap { grid-template-columns: 1fr; }
+    }
+    .street { stroke: #2a2f39; }
+  </style>
+  <script src="https://unpkg.com/d3@7"></script>
+  <script src="https://unpkg.com/d3-hexbin@0.2.2/build/d3-hexbin.js"></script>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>NYC Coffee Shop Density</h1>
+      <div class="sub">World Urbanism Day • D3.js + OpenStreetMap • Five boroughs</div>
+    </div>
+    <div class="controls">
+      <button class="btn active" id="toggleHex">Show Density Hexes</button>
+      <button class="btn" id="toggleStreets">Show Streets</button>
+      <label class="btn" style="display:inline-flex; align-items:center; gap:8px;">
+        Hex size
+        <input id="hexSize" class="range" type="range" min="6" max="28" step="1" value="14" />
+      </label>
+      <label class="btn" style="display:inline-flex; align-items:center; gap:8px;">
+        Hide chains
+        <input id="hideChains" type="checkbox" />
+      </label>
+      <button class="btn" id="downloadPng">Save as PNG</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <aside>
+      <div>
+        <strong>What you're seeing</strong>
+        <p class="note">We query OpenStreetMap for <em>coffee-related POIs</em> citywide — primarily <code>amenity=cafe</code> and <code>shop=coffee</code> — then aggregate points into hexagons to show <em>coffee shop density</em>. Toggle streets for context; optionally hide large chains.</p>
+      </div>
+      <div>
+        <strong>Color scale</strong>
+        <div class="legend"></div>
+        <div class="legend-labels"><span>Fewer</span><span>More</span></div>
+      </div>
+      <div>
+        <strong>Filters</strong>
+        <p class="note">POIs included: <code>amenity=cafe</code>, <code>shop=coffee</code>. Ways are plotted via their centroid. Chains are heuristically detected via <code>brand</code>/<code>name</code> (e.g., Starbucks, Dunkin, Pret, Blue Bottle).</p>
+      </div>
+      <div>
+        <strong>Tips</strong>
+        <ul class="note" style="margin:6px 0 0 18px;">
+          <li>Drag the hex size slider to see neighborhood-scale patterns.</li>
+          <li>Hide chains to emphasize indie cafés.</li>
+          <li>Use "Save as PNG" for a shareable poster image.</li>
+        </ul>
+      </div>
+      <div class="note">Data © OpenStreetMap contributors. Rendered with D3.js. Built for World Urbanism Day.</div>
+    </aside>
+
+    <div class="map-panel">
+      <svg id="map" viewBox="0 0 1400 1200" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="watermark">NYC • Coffee shops per hex</div>
+    </div>
+  </div>
+
+  <footer>
+    Note: Overpass queries can be slow during peak times. If it fails, refresh to retry.
+  </footer>
+
+<script>
+(async function() {
+  const svg = d3.select('#map');
+  const width = 1400, height = 1200;
+
+  // NYC bounding box (5 boroughs)
+  const bbox = { s: 40.49, w: -74.27, n: 40.92, e: -73.68 };
+
+  // Projection
+  const projection = d3.geoMercator()
+    .center([ (bbox.w + bbox.e)/2, (bbox.n + bbox.s)/2 ])
+    .scale( 90000 )
+    .translate([width/2, height/2]);
+
+  const gHex = svg.append('g').attr('id','g-hex');
+  const gStreets = svg.append('g').attr('id','g-streets').attr('opacity', 0.75);
+  const gPoints = svg.append('g').attr('id','g-points');
+
+  const btnHex = document.getElementById('toggleHex');
+  const btnStreets = document.getElementById('toggleStreets');
+  const hexSize = document.getElementById('hexSize');
+  const hideChains = document.getElementById('hideChains');
+  const downloadBtn = document.getElementById('downloadPng');
+
+  function setActive(button, active) {
+    if (active) button.classList.add('active'); else button.classList.remove('active');
+  }
+
+  btnHex.addEventListener('click', () => {
+    gHex.style('display', null);
+    gPoints.style('display', 'none');
+    setActive(btnHex, true); setActive(btnStreets, false);
+  });
+  btnStreets.addEventListener('click', () => {
+    gHex.style('display', 'none');
+    gPoints.style('display', null);
+    setActive(btnStreets, true); setActive(btnHex, false);
+  });
+
+  // Start with hex view visible
+  gPoints.style('display','none');
+
+  // Helpers (simple brand heuristic)
+  const chainRegex = new RegExp("\\b(starbucks|dunkin|pret\\s*a\\s*manger|blue\\s*bottle|gregory|joe\\s*&?\\s*the\\s*juice|seven\\s*grams|tim\\s*horten|la\\s*colombe|birch\\s*coffee|%\\s*arabica)\\b", "i");
+
+  // --- Fetch streets (thin backdrop for context) ---
+  const streetQuery = `
+    [out:json][timeout:60];
+    (
+      way["highway"]["highway"~"motorway|trunk|primary|secondary|tertiary|residential|living_street|unclassified|service"](${bbox.s},${bbox.w},${bbox.n},${bbox.e});
+    );
+    out geom;`;
+
+  try {
+    const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: streetQuery, headers: { 'Content-Type': 'text/plain' }});
+    const json = await res.json();
+    const data = json.elements.filter(el => el.type === 'way' && el.geometry);
+    const line = d3.line().x(d => projection([d.lon, d.lat])[0]).y(d => projection([d.lon, d.lat])[1]);
+    gStreets.selectAll('path.street')
+      .data(data)
+      .join('path')
+      .attr('class', 'street')
+      .attr('d', d => line(d.geometry))
+      .attr('fill','none')
+      .attr('stroke-width', 0.6)
+      .attr('stroke-linecap','round')
+      .attr('stroke-linejoin','round')
+      .attr('opacity', 0.55);
+  } catch (e) {
+    console.warn('Streets failed; continuing without backdrop', e);
+  }
+
+  // --- Fetch coffee POIs ---
+  const poiQuery = `
+    [out:json][timeout:60];
+    (
+      node["amenity"="cafe"](${bbox.s},${bbox.w},${bbox.n},${bbox.e});
+      way["amenity"="cafe"](${bbox.s},${bbox.w},${bbox.n},${bbox.e});
+      node["shop"="coffee"](${bbox.s},${bbox.w},${bbox.n},${bbox.e});
+      way["shop"="coffee"](${bbox.s},${bbox.w},${bbox.n},${bbox.e});
+    );
+    out center tags;`;
+
+  let pois = [];
+  try {
+    const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: poiQuery, headers: { 'Content-Type': 'text/plain' }});
+    const json = await res.json();
+    pois = json.elements.map(el => {
+      const lat = el.type === 'node' ? el.lat : el.center?.lat;
+      const lon = el.type === 'node' ? el.lon : el.center?.lon;
+      return lat && lon ? {lat, lon, tags: el.tags || {}, id: el.id} : null;
+    }).filter(Boolean);
+  } catch (e) {
+    svg.append('text').attr('x', width/2).attr('y', height/2).attr('text-anchor','middle').attr('fill','#fb7185').attr('font-size',16).text('Failed to load coffee POIs. Refresh to retry.');
+    throw e;
+  }
+
+  // Render point layer (for Streets view)
+  const pointsPx = pois.map(p => {
+    const xy = projection([p.lon, p.lat]);
+    return {x: xy[0], y: xy[1], p};
+  });
+
+  gPoints.selectAll('circle.poi')
+    .data(pointsPx)
+    .join('circle')
+    .attr('class','poi')
+    .attr('r', 1.8)
+    .attr('cx', d => d.x)
+    .attr('cy', d => d.y)
+    .attr('fill', d => chainRegex.test(((d.p.tags.brand||'') + ' ' + (d.p.tags.name||'')).toLowerCase()) ? '#f0f921' : '#60a5fa')
+    .attr('fill-opacity', 0.85);
+
+  // Hexbin aggregation (for Density view)
+  const hb = d3.hexbin().extent([[0,0],[width,height]]).radius(parseInt(hexSize.value));
+
+  function currentPoints() {
+    if (!hideChains.checked) return pointsPx;
+    return pointsPx.filter(d => !chainRegex.test(((d.p.tags.brand||'') + ' ' + (d.p.tags.name||'')).toLowerCase()));
+  }
+
+  function renderHexes() {
+    const pts = currentPoints();
+    const bins = hb(pts.map(d => [d.x, d.y]));
+    const max = d3.max(bins, b => b.length) || 1;
+    const color = d3.scaleSequential(d3.interpolateTurbo).domain([0, max]);
+
+    const sel = gHex.selectAll('path.hex').data(bins, d => d.x + ',' + d.y);
+    sel.join(
+      enter => enter.append('path')
+        .attr('class','hex')
+        .attr('d', d => hb.hexagon())
+        .attr('transform', d => `translate(${d.x},${d.y})`)
+        .attr('fill', d => color(d.length))
+        .attr('fill-opacity', 0.95)
+        .attr('stroke', '#0b0d10')
+        .attr('stroke-opacity', 0.6)
+        .attr('stroke-width', 0.5),
+      update => update
+        .attr('transform', d => `translate(${d.x},${d.y})`)
+        .attr('fill', d => color(d.length)),
+      remove => remove.remove()
+    );
+  }
+
+  renderHexes();
+
+  hexSize.addEventListener('input', () => {
+    hb.radius(parseInt(hexSize.value));
+    renderHexes();
+  });
+  hideChains.addEventListener('change', () => renderHexes());
+
+  // Export to PNG
+  downloadBtn.addEventListener('click', () => {
+    const serializer = new XMLSerializer();
+    const cloned = svg.node().cloneNode(true);
+
+    // Respect current mode
+    if (gHex.style('display') === 'none') {
+      cloned.querySelector('#g-hex')?.setAttribute('style','display:none');
+    } else {
+      cloned.querySelector('#g-points')?.setAttribute('style','display:none');
+    }
+
+    const svgString = serializer.serializeToString(cloned);
+    const img = new Image();
+    const svgBlob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
+    const url = URL.createObjectURL(svgBlob);
+
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#0b0d10';
+      ctx.fillRect(0,0,width,height);
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      const a = document.createElement('a');
+      a.download = 'nyc_coffee_density.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    };
+    img.src = url;
+  });
+})();
+</script>
+</body>
+</html>
