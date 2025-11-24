@@ -3,3 +3,7 @@ For Day 24 of the challenge, @pendulating riffed off of the 'Places and their Na
 I used flashtext, a high-performance keyword search algorithm, to scan articles and count these mentions. This allows us to map, for example, how often French newspapers mention "Allemagne" (Germany) or how often Chinese outlets mention "美国" (USA). I've also tried to manually verify the accuracy of results, removing instances like 'CAN' (the ISO code for Canada) that inflated counts via equivalence after tokenization with the English verb 'can'. 
 
 Play around with Global Gossip at [mfranchi.net/global-gossip](https://mfranchi.net/global-gossip)! You can explore media attention patterns, cultural proximities (i.e. from colonialism or shared religion), and trends over time. 
+
+
+### <= 300 char version: 
+Day 24: @pendulating mapped global media attention patterns using 415K news articles from 55 countries (2015-present). Using Unicode CLDR's multilingual country names across 186 languages, the analysis tracks how often outlets mention other nations—like French papers citing "Allemagne" or Chinese media mentioning "美国". Explore at mfranchi.net/global-gossip!
