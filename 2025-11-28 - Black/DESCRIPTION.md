@@ -1,0 +1,2 @@
+This map shows a nighttime portrait of the U.S. built from VIIRS satellite data. It shows where *true* night still exists, and where it’s been erased by light pollution. This theme captures the tension between human presence and natural darkness. Mapping light is really mapping our cities, while the dark spaces reveal areas untouched by humans. It’s a way to visualize both connection and absence.
+
