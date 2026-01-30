@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>30 Days of Maps</title>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Configuration Variables - Easy to customize */
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #151b2e;
+            --text-primary: #e8e6e3;
+            --text-secondary: #9b9b9b;
+            --accent-color: #ff6b6b;
+            --accent-glow: rgba(255, 107, 107, 0.3);
+            --grid-gap: 2rem;
+            --border-radius: 4px;
+            --font-heading: 'Crimson Pro', serif;
+            --font-body: 'Crimson Pro', serif;
+            --font-mono: 'DM Mono', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* Animated gradient background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(255, 107, 107, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(107, 140, 255, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        /* Header Section */
+        header {
+            margin-bottom: 4rem;
+            position: relative;
+        }
+
+        h1 {
+            font-family: var(--font-heading);
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: 300;
+            letter-spacing: -0.02em;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .intro-content {
+            max-width: 800px;
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .intro-content p {
+            margin-bottom: 1rem;
+        }
+
+        .intro-content h1,
+        .intro-content h2,
+        .intro-content h3 {
+            color: var(--text-primary);
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .intro-content h1 { font-size: 2rem; }
+        .intro-content h2 { font-size: 1.5rem; }
+        .intro-content h3 { font-size: 1.2rem; }
+
+        .meta-info {
+            display: flex;
+            gap: 2rem;
+            margin-top: 2rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            animation: fadeInUp 0.8s ease-out 0.4s both;
+            flex-wrap: wrap;
+        }
+
+        .meta-info span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .meta-info span::before {
+            content: '→';
+            color: var(--accent-color);
+        }
+
+        .meta-info a {
+            color: var(--accent-color);
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .meta-info a:hover {
+            opacity: 0.7;
+        }
+
+        /* Grid Section */
+        .maps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: var(--grid-gap);
+            margin-top: 3rem;
+        }
+
+        .map-card {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), 
+                        box-shadow 0.4s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            animation: fadeInUp 0.6s ease-out both;
+        }
+
+        .map-card:nth-child(1) { animation-delay: 0.1s; }
+        .map-card:nth-child(2) { animation-delay: 0.15s; }
+        .map-card:nth-child(3) { animation-delay: 0.2s; }
+        .map-card:nth-child(4) { animation-delay: 0.25s; }
+        .map-card:nth-child(5) { animation-delay: 0.3s; }
+        .map-card:nth-child(6) { animation-delay: 0.35s; }
+
+        .map-card:hover {
+            transform: scale(1.08) translateY(-8px);
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(255, 107, 107, 0.1),
+                0 0 40px var(--accent-glow);
+            z-index: 10;
+        }
+
+        .map-image-container {
+            width: 100%;
+            height: 300px;
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .map-image-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(10, 14, 26, 0.8) 100%);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .map-card:hover .map-image-container::after {
+            opacity: 1;
+        }
+
+        .map-image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+
+        .map-card:hover .map-image-container img {
+            transform: scale(1.1);
+        }
+
+        .map-image-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            pointer-events: none;
+        }
+
+        .map-info {
+            padding: 1.5rem;
+        }
+
+        .map-title {
+            font-family: var(--font-heading);
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .map-date {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--accent-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            font-family: var(--font-mono);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Error state */
+        .error-message {
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid var(--accent-color);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            text-align: center;
+            font-family: var(--font-mono);
+            color: var(--accent-color);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .container {
+                padding: 2rem 1rem;
+            }
+
+            .maps-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            h1 {
+                font-size: 3rem;
+            }
+
+            .meta-info {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+
+        /* Placeholder for missing images */
+        .map-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.1) 0%, rgba(107, 140, 255, 0.1) 100%);
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 id="page-title">30 Days of Maps</h1>
+            <div class="intro-content" id="intro-content">
+                <div class="loading">Loading introduction</div>
+            </div>
+            <div class="meta-info">
+                <span id="map-count">Loading maps</span>
+                <span><a href="" id="repo-link" target="_blank">View Repository</a></span>
+            </div>
+        </header>
+
+        <div class="maps-grid" id="maps-grid">
+            <div class="loading">Discovering maps</div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-detect repository from current URL
+        function detectRepository() {
+            const hostname = window.location.hostname;
+            const pathname = window.location.pathname;
+            
+            // Check if we're on GitHub Pages
+            if (hostname.endsWith('.github.io')) {
+                // Extract username from hostname (username.github.io)
+                const username = hostname.split('.')[0];
+                
+                // Extract repo name from pathname
+                // For user pages: username.github.io/repo-name/
+                // For project pages: username.github.io (uses default repo)
+                const pathParts = pathname.split('/').filter(p => p);
+                const repoName = pathParts.length > 0 ? pathParts[0] : username + '.github.io';
+                
+                return {
+                    owner: username,
+                    repo: repoName,
+                    branch: 'main' // or 'gh-pages' depending on your setup
+                };
+            }
+            
+            // Fallback: Manual configuration (edit these if not using GitHub Pages)
+            return {
+                owner: 'gsagostini',  // Change this to your GitHub username
+                repo: '30DoM-2025',    // Change this to your repo name
+                branch: 'main'         // Change this if using a different branch
+            };
+        }
+
+        // Get repository configuration
+        const repoConfig = detectRepository();
+        
+        // Configuration object
+        const CONFIG = {
+            repoOwner: repoConfig.owner,
+            repoName: repoConfig.repo,
+            branch: repoConfig.branch,
+            introFile: 'introduction.md',
+            mapExtensionPriority: ['html', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'svg'],
+            caseInsensitive: true
+        };
+
+        // GitHub API endpoints
+        const API_BASE = `https://api.github.com/repos/${CONFIG.repoOwner}/${CONFIG.repoName}`;
+        const RAW_BASE = `https://raw.githubusercontent.com/${CONFIG.repoOwner}/${CONFIG.repoName}/${CONFIG.branch}`;
+
+        // Update repository link
+        document.getElementById('repo-link').href = `https://github.com/${CONFIG.repoOwner}/${CONFIG.repoName}`;
+
+        // Utility: Parse markdown to simple HTML
+        function parseMarkdown(markdown) {
+            return markdown
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/^(.+)$/gim, '<p>$1</p>')
+                .replace(/<\/p><p><h/g, '</p><h')
+                .replace(/<\/h([1-3])><\/p>/g, '</h$1>');
+        }
+
+        // Load introduction from introduction.md
+        async function loadIntroduction() {
+            try {
+                const response = await fetch(`${RAW_BASE}/${CONFIG.introFile}`);
+                if (response.ok) {
+                    const markdown = await response.text();
+                    const html = parseMarkdown(markdown);
+                    document.getElementById('intro-content').innerHTML = html;
+                } else {
+                    document.getElementById('intro-content').innerHTML = 
+                        '<p>Welcome to the 30 Days of Maps gallery. Explore a collection of cartographic creations.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading introduction:', error);
+                document.getElementById('intro-content').innerHTML = 
+                    '<p>Welcome to the 30 Days of Maps gallery.</p>';
+            }
+        }
+
+        // Get all directories from the repository
+        async function getRepositoryContents() {
+            try {
+                const response = await fetch(`${API_BASE}/contents`);
+                if (!response.ok) throw new Error('Failed to fetch repository contents');
+                const contents = await response.json();
+                
+                // Filter for directories that match the date pattern (YYYY-MM-DD)
+                const mapDirs = contents.filter(item => 
+                    item.type === 'dir' && /^\d{4}-\d{2}-\d{2}/.test(item.name)
+                );
+
+                return mapDirs.sort((a, b) => a.name.localeCompare(b.name));
+            } catch (error) {
+                console.error('Error fetching repository contents:', error);
+                return [];
+            }
+        }
+
+        // Find the best map file in a directory
+        async function findMapFile(dirName) {
+            try {
+                const response = await fetch(`${API_BASE}/contents/${dirName}`);
+                if (!response.ok) return null;
+                
+                const files = await response.json();
+                
+                // Try to find files named 'map' or 'MAP' with different extensions
+                for (const ext of CONFIG.mapExtensionPriority) {
+                    let mapFile = files.find(f => f.name.toLowerCase() === `map.${ext.toLowerCase()}`);
+                    if (mapFile) {
+                        return { file: mapFile, extension: ext };
+                    }
+                }
+                
+                return null;
+            } catch (error) {
+                console.error(`Error finding map in ${dirName}:`, error);
+                return null;
+            }
+        }
+
+        // Create a map card element
+        function createMapCard(dirName, mapInfo) {
+            const card = document.createElement('div');
+            card.className = 'map-card';
+            
+            const imageContainer = document.createElement('div');
+            imageContainer.className = 'map-image-container';
+            
+            if (mapInfo) {
+                const { file, extension } = mapInfo;
+                const fileUrl = file.download_url;
+                
+                if (extension === 'html') {
+                    // For HTML files, embed in iframe
+                    const iframe = document.createElement('iframe');
+                    iframe.src = fileUrl;
+                    iframe.title = `Map: ${dirName}`;
+                    imageContainer.appendChild(iframe);
+                } else if (['png', 'jpg', 'jpeg', 'gif', 'svg'].includes(extension)) {
+                    // For image files, use img tag
+                    const img = document.createElement('img');
+                    img.src = fileUrl;
+                    img.alt = `Map: ${dirName}`;
+                    img.loading = 'lazy';
+                    imageContainer.appendChild(img);
+                } else if (extension === 'pdf') {
+                    // For PDFs, show a preview image or placeholder
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'map-placeholder';
+                    placeholder.textContent = 'PDF Map (click to view)';
+                    imageContainer.appendChild(placeholder);
+                    card.addEventListener('click', () => {
+                        window.open(fileUrl, '_blank');
+                    });
+                }
+            } else {
+                // No map file found
+                const placeholder = document.createElement('div');
+                placeholder.className = 'map-placeholder';
+                placeholder.textContent = 'No map file found';
+                imageContainer.appendChild(placeholder);
+            }
+            
+            const info = document.createElement('div');
+            info.className = 'map-info';
+            
+            // Extract day number and theme from directory name
+            const parts = dirName.split(' - ');
+            const date = parts[0];
+            const theme = parts.slice(1).join(' - ') || 'Map';
+            
+            info.innerHTML = `
+                <div class="map-date">${date}</div>
+                <div class="map-title">${theme}</div>
+            `;
+            
+            card.appendChild(imageContainer);
+            card.appendChild(info);
+            
+            return card;
+        }
+
+        // Main function to load and display all maps
+        async function loadMaps() {
+            const grid = document.getElementById('maps-grid');
+            const mapCountEl = document.getElementById('map-count');
+            
+            // Load introduction
+            await loadIntroduction();
+            
+            // Get all map directories
+            const directories = await getRepositoryContents();
+            
+            if (directories.length === 0) {
+                grid.innerHTML = '<div class="error-message">No map directories found. Please check the repository configuration.</div>';
+                mapCountEl.textContent = '0 maps found';
+                return;
+            }
+            
+            // Update count
+            mapCountEl.textContent = `${directories.length} maps`;
+            
+            // Clear loading state
+            grid.innerHTML = '';
+            
+            // Load each map
+            for (const dir of directories) {
+                const mapInfo = await findMapFile(dir.name);
+                const card = createMapCard(dir.name, mapInfo);
+                grid.appendChild(card);
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', loadMaps);
+    </script>
+</body>
+</html>
