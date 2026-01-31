@@ -4,6 +4,6 @@
 
 **Description**:
 
-I created a gif that visualizes NYC neighborhoods under different map projections, saved as `different_projections.gif`
+(GIS Day) Focus entirely on map projections. Choose an unusual or misunderstood projection to highlight a theme, or visualize distortion. (See xkcd.com/977)
 
-**Members**: Jennah Gosciak
+**Members**: no one signed up yet!
