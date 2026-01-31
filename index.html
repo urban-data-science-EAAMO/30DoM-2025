@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>30 Days of Maps | Urban Data Science & Equitable Cities</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        /* Matching the EAAMO main site styling */
+        :root {
+            /* Using standard web-safe colors similar to academic sites */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --accent-color: #0066cc;
+            --accent-hover: #0052a3;
+            --border-color: #dee2e6;
+            --grid-gap: 2.5rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .back-button {
+            position: fixed;
+            top: 1.5rem;
+            right: 2rem;
+            padding: 0.6rem 1.2rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: background 0.2s ease, transform 0.2s ease;
+            z-index: 100;
+            border: 1px solid var(--border-color);
+            font-weight: 500;
+        }
+
+        .back-button:hover {
+            background: var(--border-color);
+            transform: translateX(-4px);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        header {
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+
+        .intro-content {
+            max-width: 800px;
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-top: 1rem;
+        }
+
+        .intro-content p {
+            margin-bottom: 1rem;
+        }
+
+        .intro-content h1,
+        .intro-content h2,
+        .intro-content h3 {
+            color: var(--text-primary);
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .intro-content h1 { font-size: 1.8rem; }
+        .intro-content h2 { font-size: 1.5rem; }
+        .intro-content h3 { font-size: 1.2rem; }
+
+        .meta-info {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            flex-wrap: wrap;
+        }
+
+        .meta-info span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .meta-info a {
+            color: var(--accent-color);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .meta-info a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        /* Clean gallery grid - no frames */
+        .maps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: var(--grid-gap);
+            margin-top: 2rem;
+        }
+
+        .map-card {
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+
+        /* Hover enlarges the whole map */
+        .map-card:hover {
+            transform: scale(1.06);
+            z-index: 10;
+        }
+
+        /* No container - just the image */
+        .map-image-container {
+            width: 100%;
+            aspect-ratio: 4/3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: visible;
+            position: relative;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+        }
+
+        .map-card:hover .map-image-container {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Pure map display */
+        .map-image-container img,
+        .map-image-container canvas,
+        .map-image-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .map-image-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            pointer-events: none;
+            display: block;
+        }
+
+        .map-info {
+            padding: 1rem 0.5rem;
+        }
+
+        .map-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+            color: var(--text-primary);
+        }
+
+        .map-date {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Compact modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            width: 100%;
+            max-width: 900px;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: scaleIn 0.3s ease-out;
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 36px;
+            height: 36px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: var(--border-color);
+        }
+
+        .modal-map-container {
+            width: 100%;
+            max-height: 450px;
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .modal-map-container img,
+        .modal-map-container canvas,
+        .modal-map-container video {
+            max-width: 100%;
+            max-height: 450px;
+            object-fit: contain;
+        }
+
+        .modal-map-container iframe {
+            width: 100%;
+            height: 450px;
+            border: none;
+            pointer-events: all;
+        }
+
+        .modal-info {
+            padding: 2rem;
+        }
+
+        .modal-details h2 {
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .modal-date {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-theme-description {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+            font-style: italic;
+            padding-left: 1rem;
+            border-left: 3px solid var(--accent-color);
+        }
+
+        .modal-map-description {
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        .modal-map-description p {
+            margin-bottom: 0.75rem;
+        }
+
+        /* Subtle headings in descriptions */
+        .modal-map-description h1,
+        .modal-map-description h2,
+        .modal-map-description h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .modal-authors {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .modal-authors h3 {
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .modal-authors-list {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .modal-authors-list span {
+            font-size: 0.95rem;
+        }
+
+        .modal-authors a {
+            color: var(--accent-color);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .modal-authors a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        .interactive-link {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.7rem 1.2rem;
+            background: var(--accent-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: background 0.2s ease;
+            font-weight: 500;
+        }
+
+        .interactive-link:hover {
+            background: var(--accent-hover);
+        }
+
+        .view-full-hint {
+            position: absolute;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: white;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-map-container:hover .view-full-hint {
+            opacity: 1;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            border: 1px solid #f5c2c7;
+            border-radius: 4px;
+            padding: 1.5rem;
+            text-align: center;
+            color: #842029;
+        }
+
+        .map-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .back-button {
+                top: 1rem;
+                right: 1rem;
+                font-size: 0.8rem;
+                padding: 0.5rem 1rem;
+            }
+
+            .container {
+                padding: 2rem 1rem;
+            }
+
+            .maps-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .modal {
+                padding: 1rem;
+            }
+
+            .modal-content {
+                max-width: 100%;
+            }
+
+            .modal-map-container {
+                max-height: 300px;
+            }
+
+            .modal-info {
+                padding: 1.5rem;
+            }
+
+            .modal-details h2 {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="https://urban-data-science-eaamo.github.io/" class="back-button">← Back to Main Page</a>
+
+    <div class="container">
+        <header>
+            <h1>30 Days of Maps</h1>
+            <div class="intro-content" id="intro-content">
+                <div class="loading">Loading introduction</div>
+            </div>
+            <div class="meta-info">
+                <span id="map-count">Loading maps...</span>
+                <span><a href="" id="repo-link" target="_blank">View Repository</a></span>
+            </div>
+        </header>
+
+        <div class="maps-grid" id="maps-grid">
+            <div class="loading">Discovering maps</div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div class="modal-map-container" id="modal-map-container"></div>
+            <div class="modal-info">
+                <div class="modal-details">
+                    <h2 id="modal-title"></h2>
+                    <div class="modal-date" id="modal-date"></div>
+                    <div class="modal-theme-description" id="modal-theme-description"></div>
+                    <div class="modal-map-description" id="modal-map-description"></div>
+                    <div class="modal-authors" id="modal-authors"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        function detectRepository() {
+            const hostname = window.location.hostname;
+            const pathname = window.location.pathname;
+            
+            if (hostname.endsWith('.github.io')) {
+                const username = hostname.split('.')[0];
+                const pathParts = pathname.split('/').filter(p => p);
+                const repoName = pathParts.length > 0 ? pathParts[0] : username + '.github.io';
+                return { owner: username, repo: repoName, branch: 'main' };
+            }
+            
+            return { owner: 'urban-data-science-eaamo', repo: '30DoM-2025', branch: 'main' };
+        }
+
+        const repoConfig = detectRepository();
+        const CONFIG = {
+            repoOwner: repoConfig.owner,
+            repoName: repoConfig.repo,
+            branch: repoConfig.branch,
+            introFile: 'introduction.md',
+            signupFile: 'signup.csv',
+            mapExtensionPriority: ['html', 'mp4', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'svg']
+        };
+
+        const API_BASE = `https://api.github.com/repos/${CONFIG.repoOwner}/${CONFIG.repoName}`;
+        const RAW_BASE = `https://raw.githubusercontent.com/${CONFIG.repoOwner}/${CONFIG.repoName}/${CONFIG.branch}`;
+
+        document.getElementById('repo-link').href = `https://github.com/${CONFIG.repoOwner}/${CONFIG.repoName}`;
+
+        let challengeData = {};
+
+        function parseMarkdown(markdown) {
+            return markdown
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+                .replace(/\[(.*?)\]\((.*?)\)/gim, '<a href="$2" target="_blank">$1</a>')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/^(.+)$/gim, '<p>$1</p>')
+                .replace(/<\/p><p><h/g, '</p><h')
+                .replace(/<\/h([1-3])><\/p>/g, '</h$1>');
+        }
+
+        function parseCSV(csv) {
+            const lines = csv.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            const result = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                
+                const values = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let char of lines[i]) {
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        values.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                values.push(current.trim());
+                
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = values[index] || '';
+                });
+                result.push(row);
+            }
+            
+            return result;
+        }
+
+        async function loadChallengeData() {
+            try {
+                const response = await fetch(`${RAW_BASE}/${CONFIG.signupFile}`);
+                if (response.ok) {
+                    const csv = await response.text();
+                    const data = parseCSV(csv);
+                    
+                    data.forEach(row => {
+                        const dateParts = row.Date.split('-');
+                        if (dateParts.length === 3) {
+                            const formattedDate = `${dateParts[2]}-${dateParts[0]}-${dateParts[1]}`;
+                            
+                            const members = [];
+                            
+                            if (row['Member 1']) {
+                                const member1 = {
+                                    name: row['Member 1'],
+                                    url: row['Member 1 website'] ? 
+                                        (row['Member 1 website'].startsWith('http') ? 
+                                            row['Member 1 website'] : 
+                                            'https://' + row['Member 1 website']) : 
+                                        null
+                                };
+                                members.push(member1);
+                            }
+                            
+                            if (row['Member 2 (optional)']) {
+                                const member2 = {
+                                    name: row['Member 2 (optional)'],
+                                    url: row['Member 2 website'] ? 
+                                        (row['Member 2 website'].startsWith('http') ? 
+                                            row['Member 2 website'] : 
+                                            'https://' + row['Member 2 website']) : 
+                                        null
+                                };
+                                members.push(member2);
+                            }
+                            
+                            challengeData[formattedDate] = {
+                                name: row['Challenge Name'],
+                                description: row.Description,
+                                members: members
+                            };
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading signup.csv:', error);
+            }
+        }
+
+        async function loadIntroduction() {
+            try {
+                const response = await fetch(`${RAW_BASE}/${CONFIG.introFile}`);
+                if (response.ok) {
+                    const markdown = await response.text();
+                    const html = parseMarkdown(markdown);
+                    document.getElementById('intro-content').innerHTML = html;
+                } else {
+                    document.getElementById('intro-content').innerHTML = 
+                        '<p>Welcome to the 30 Days of Maps gallery.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading introduction:', error);
+                document.getElementById('intro-content').innerHTML = 
+                    '<p>Welcome to the 30 Days of Maps gallery.</p>';
+            }
+        }
+
+        async function getRepositoryContents() {
+            try {
+                const response = await fetch(`${API_BASE}/contents`);
+                if (!response.ok) throw new Error('Failed to fetch');
+                const contents = await response.json();
+                
+                const mapDirs = contents.filter(item => 
+                    item.type === 'dir' && /^\d{4}-\d{2}-\d{2}/.test(item.name)
+                );
+
+                return mapDirs.sort((a, b) => a.name.localeCompare(b.name));
+            } catch (error) {
+                console.error('Error:', error);
+                return [];
+            }
+        }
+
+        async function findMapFile(dirName) {
+            try {
+                const response = await fetch(`${API_BASE}/contents/${dirName}`);
+                if (!response.ok) return null;
+                
+                const files = await response.json();
+                
+                for (const ext of CONFIG.mapExtensionPriority) {
+                    let mapFile = files.find(f => f.name.toLowerCase() === `map.${ext.toLowerCase()}`);
+                    if (mapFile) {
+                        return { file: mapFile, extension: ext };
+                    }
+                }
+                
+                return null;
+            } catch (error) {
+                console.error(`Error finding map in ${dirName}:`, error);
+                return null;
+            }
+        }
+
+        async function getMapDescription(dirName) {
+            try {
+                let response = await fetch(`${RAW_BASE}/${dirName}/DESCRIPTION.md`);
+                if (response.ok) {
+                    return await response.text();
+                }
+                
+                response = await fetch(`${RAW_BASE}/${dirName}/BLUESKY.md`);
+                if (response.ok) {
+                    return await response.text();
+                }
+                
+                return null;
+            } catch (error) {
+                console.error(`Error getting description for ${dirName}:`, error);
+                return null;
+            }
+        }
+
+        async function renderPDF(url, container) {
+            try {
+                const loadingTask = pdfjsLib.getDocument(url);
+                const pdf = await loadingTask.promise;
+                const page = await pdf.getPage(1);
+                
+                const scale = 2;
+                const viewport = page.getViewport({ scale: scale });
+                
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                const renderContext = {
+                    canvasContext: context,
+                    viewport: viewport
+                };
+                
+                await page.render(renderContext).promise;
+                container.appendChild(canvas);
+                
+                return url;
+            } catch (error) {
+                console.error('Error rendering PDF:', error);
+                const placeholder = document.createElement('div');
+                placeholder.className = 'map-placeholder';
+                placeholder.textContent = 'PDF (click to view)';
+                container.appendChild(placeholder);
+                return url;
+            }
+        }
+
+        function createMapCard(dirName, mapInfo) {
+            const card = document.createElement('div');
+            card.className = 'map-card';
+            
+            const imageContainer = document.createElement('div');
+            imageContainer.className = 'map-image-container';
+            
+            if (mapInfo) {
+                const { file, extension } = mapInfo;
+                const fileUrl = file.download_url;
+                
+                if (extension === 'html') {
+                    const iframe = document.createElement('iframe');
+                    iframe.src = fileUrl;
+                    iframe.title = `Map: ${dirName}`;
+                    imageContainer.appendChild(iframe);
+                } else if (extension === 'mp4') {
+                    const video = document.createElement('video');
+                    video.src = fileUrl;
+                    video.autoplay = true;
+                    video.loop = true;
+                    video.muted = true;
+                    video.playsInline = true;
+                    imageContainer.appendChild(video);
+                } else if (['png', 'jpg', 'jpeg', 'svg', 'gif'].includes(extension)) {
+                    const img = document.createElement('img');
+                    img.src = fileUrl;
+                    img.alt = `Map: ${dirName}`;
+                    img.loading = 'lazy';
+                    imageContainer.appendChild(img);
+                } else if (extension === 'pdf') {
+                    renderPDF(fileUrl, imageContainer);
+                }
+            } else {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'map-placeholder';
+                placeholder.textContent = 'No map file found';
+                imageContainer.appendChild(placeholder);
+            }
+            
+            const info = document.createElement('div');
+            info.className = 'map-info';
+            
+            const parts = dirName.split(' - ');
+            const date = parts[0];
+            const theme = parts.slice(1).join(' - ') || 'Map';
+            
+            info.innerHTML = `
+                <div class="map-date">${date}</div>
+                <div class="map-title">${theme}</div>
+            `;
+            
+            card.appendChild(imageContainer);
+            card.appendChild(info);
+            card.addEventListener('click', () => openModal(dirName, mapInfo));
+            
+            return card;
+        }
+
+        async function openModal(dirName, mapInfo) {
+            const modal = document.getElementById('modal');
+            const mapContainer = document.getElementById('modal-map-container');
+            const modalTitle = document.getElementById('modal-title');
+            const modalDate = document.getElementById('modal-date');
+            const modalThemeDesc = document.getElementById('modal-theme-description');
+            const modalMapDesc = document.getElementById('modal-map-description');
+            const modalAuthors = document.getElementById('modal-authors');
+            
+            const parts = dirName.split(' - ');
+            const date = parts[0];
+            const theme = parts.slice(1).join(' - ') || 'Map';
+            
+            modalTitle.textContent = theme;
+            modalDate.textContent = date;
+            
+            const challengeInfo = challengeData[date];
+            if (challengeInfo) {
+                modalThemeDesc.textContent = challengeInfo.description;
+                
+                if (challengeInfo.members && challengeInfo.members.length > 0) {
+                    let authorsHtml = '<h3>Contributors</h3><div class="modal-authors-list">';
+                    for (const member of challengeInfo.members) {
+                        if (member.url) {
+                            authorsHtml += `<span><a href="${member.url}" target="_blank">${member.name}</a></span>`;
+                        } else {
+                            authorsHtml += `<span>${member.name}</span>`;
+                        }
+                    }
+                    authorsHtml += '</div>';
+                    modalAuthors.innerHTML = authorsHtml;
+                } else {
+                    modalAuthors.innerHTML = '';
+                }
+            } else {
+                modalThemeDesc.textContent = '';
+                modalAuthors.innerHTML = '';
+            }
+            
+            mapContainer.innerHTML = '';
+            modalMapDesc.innerHTML = '';
+            
+            if (mapInfo) {
+                const { file, extension } = mapInfo;
+                const fileUrl = file.download_url;
+                
+                if (extension === 'html') {
+                    const iframe = document.createElement('iframe');
+                    iframe.src = fileUrl;
+                    iframe.title = `Map: ${dirName}`;
+                    mapContainer.appendChild(iframe);
+                    
+                    const link = document.createElement('a');
+                    link.href = fileUrl;
+                    link.target = '_blank';
+                    link.className = 'interactive-link';
+                    link.textContent = 'Open Interactive Map →';
+                    modalMapDesc.appendChild(link);
+                } else if (extension === 'mp4') {
+                    const video = document.createElement('video');
+                    video.src = fileUrl;
+                    video.controls = true;
+                    video.autoplay = true;
+                    video.loop = true;
+                    mapContainer.appendChild(video);
+                    
+                    const hint = document.createElement('div');
+                    hint.className = 'view-full-hint';
+                    hint.textContent = 'Click to open video';
+                    mapContainer.appendChild(hint);
+                    
+                    mapContainer.onclick = () => window.open(fileUrl, '_blank');
+                } else if (['png', 'jpg', 'jpeg', 'gif', 'svg'].includes(extension)) {
+                    const img = document.createElement('img');
+                    img.src = fileUrl;
+                    img.alt = `Map: ${dirName}`;
+                    mapContainer.appendChild(img);
+                    
+                    const hint = document.createElement('div');
+                    hint.className = 'view-full-hint';
+                    hint.textContent = 'Click to view full size';
+                    mapContainer.appendChild(hint);
+                    
+                    mapContainer.onclick = () => window.open(fileUrl, '_blank');
+                } else if (extension === 'pdf') {
+                    await renderPDF(fileUrl, mapContainer);
+                    
+                    const hint = document.createElement('div');
+                    hint.className = 'view-full-hint';
+                    hint.textContent = 'Click to open PDF';
+                    mapContainer.appendChild(hint);
+                    
+                    mapContainer.onclick = () => window.open(fileUrl, '_blank');
+                }
+            }
+            
+            const description = await getMapDescription(dirName);
+            if (description) {
+                const descHtml = parseMarkdown(description);
+                const existingContent = modalMapDesc.innerHTML;
+                modalMapDesc.innerHTML = descHtml + existingContent;
+            }
+            
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal');
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target.id === 'modal') {
+                closeModal();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        async function loadMaps() {
+            const grid = document.getElementById('maps-grid');
+            const mapCountEl = document.getElementById('map-count');
+            
+            await Promise.all([loadChallengeData(), loadIntroduction()]);
+            
+            const directories = await getRepositoryContents();
+            
+            if (directories.length === 0) {
+                grid.innerHTML = '<div class="error-message">No map directories found.</div>';
+                mapCountEl.textContent = '0 maps found';
+                return;
+            }
+            
+            mapCountEl.textContent = `${directories.length} maps`;
+            grid.innerHTML = '';
+            
+            for (const dir of directories) {
+                const mapInfo = await findMapFile(dir.name);
+                const card = createMapCard(dir.name, mapInfo);
+                grid.appendChild(card);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadMaps);
+    </script>
+</body>
+</html>
