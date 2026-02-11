@@ -594,6 +594,12 @@
             mapExtensionPriority: ['html', 'mp4', 'm4v', 'webm', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'pdf']
         };
 
+        const CARD_PREVIEW_IMAGES = {
+            '2025-11-14 - Data challenge- OpenStreetMap': '2025-11-14 - Data challenge- OpenStreetMap/osm.png',
+            '2025-11-15 - Fire': 'fire.png',
+            '2025-11-10 - Air': '2025-11-10 - Air/air.png'
+        };
+
         const API_BASE = `https://api.github.com/repos/${CONFIG.repoOwner}/${CONFIG.repoName}`;
         const RAW_BASE = `https://raw.githubusercontent.com/${CONFIG.repoOwner}/${CONFIG.repoName}/${CONFIG.branch}`;
 
@@ -1059,6 +1065,21 @@
             return file.download_url || toJsDelivrUrl(file.path);
         }
 
+        function getCardPreviewImageUrl(dirName) {
+            const previewPath = CARD_PREVIEW_IMAGES[dirName];
+            if (!previewPath) return null;
+
+            if (isLocalPreview()) {
+                return toLocalUrl(previewPath);
+            }
+
+            if (isGitHubPagesPreview()) {
+                return toSiteRelativeUrl(previewPath);
+            }
+
+            return toJsDelivrUrl(previewPath);
+        }
+
         async function getContentLengthForUrl(url) {
             try {
                 let response = await fetch(url, { method: 'HEAD' });
@@ -1169,8 +1190,15 @@
             if (mapInfo) {
                 const { file, extension } = mapInfo;
                 const fileUrl = getRenderableMapUrl(file, extension);
+                const previewImageUrl = getCardPreviewImageUrl(dirName);
                 
-                if (extension === 'html') {
+                if (previewImageUrl) {
+                    const img = document.createElement('img');
+                    img.src = previewImageUrl;
+                    img.alt = `Map preview: ${dirName}`;
+                    img.loading = 'lazy';
+                    imageContainer.appendChild(img);
+                } else if (extension === 'html') {
                     const loadingPlaceholder = document.createElement('div');
                     loadingPlaceholder.className = 'map-image-loading';
                     loadingPlaceholder.textContent = 'Loading interactive map...';
@@ -1181,6 +1209,16 @@
                     iframe.title = `Map: ${dirName}`;
                     iframe.loading = 'lazy';
                     iframe.referrerPolicy = 'no-referrer';
+                    if (
+                        dirName === '2025-11-14 - Data challenge- OpenStreetMap' ||
+                        dirName === '2025-11-15 - Fire'
+                    ) {
+                        // Bias preview right while keeping content clipped inside the card bounds.
+                        imageContainer.style.overflow = 'hidden';
+                        iframe.style.width = '140%';
+                        iframe.style.height = '100%';
+                        iframe.style.transform = 'translateX(-24%)';
+                    }
                     iframe.onload = () => {
                         loadingPlaceholder.classList.add('hidden');
                     };
