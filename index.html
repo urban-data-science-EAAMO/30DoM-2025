@@ -449,6 +449,20 @@
             font-size: 0.9rem;
         }
 
+        .interactive-preview {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #eef3f8 0%, #e2e9f1 100%);
+            color: #2f4f73;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-align: center;
+            padding: 1rem;
+        }
+
         @media (max-width: 768px) {
             .back-button {
                 top: 1rem;
@@ -989,6 +1003,22 @@
             return file.download_url || toJsDelivrUrl(file.path);
         }
 
+        function invalidateLeafletInIframe(iframe) {
+            try {
+                const iframeWindow = iframe.contentWindow;
+                if (!iframeWindow) return;
+
+                const maybeMaps = Object.keys(iframeWindow)
+                    .filter(key => key.startsWith('map_'))
+                    .map(key => iframeWindow[key])
+                    .filter(mapObj => mapObj && typeof mapObj.invalidateSize === 'function');
+
+                maybeMaps.forEach(mapObj => mapObj.invalidateSize(true));
+            } catch (error) {
+                // Cross-origin iframes may not allow access; ignore safely.
+            }
+        }
+
         async function isUsableMapFile(file) {
             if (!file) return false;
 
@@ -1025,12 +1055,11 @@
                 const fileUrl = getRenderableMapUrl(file, extension);
                 
                 if (extension === 'html') {
-                    const iframe = document.createElement('iframe');
-                    iframe.src = fileUrl;
-                    iframe.title = `Map: ${dirName}`;
-                    iframe.loading = 'lazy';
-                    iframe.referrerPolicy = 'no-referrer';
-                    imageContainer.appendChild(iframe);
+                    // Avoid loading all interactive maps in the grid: improves initial page performance.
+                    const preview = document.createElement('div');
+                    preview.className = 'interactive-preview';
+                    preview.textContent = 'Interactive map preview. Click to open.';
+                    imageContainer.appendChild(preview);
                 } else if (['mp4', 'm4v', 'webm'].includes(extension)) {
                     const video = document.createElement('video');
                     video.src = fileUrl;
@@ -1112,6 +1141,9 @@
                 modalThemeDesc.textContent = '';
                 modalAuthors.innerHTML = '';
             }
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
             
             mapContainer.innerHTML = '';
             mapContainer.onclick = null;
@@ -1127,6 +1159,11 @@
                     iframe.title = `Map: ${dirName}`;
                     iframe.loading = 'eager';
                     iframe.referrerPolicy = 'no-referrer';
+                    iframe.onload = () => {
+                        // Folium/Leaflet maps can render with wrong bounds when loaded in modal contexts.
+                        invalidateLeafletInIframe(iframe);
+                        setTimeout(() => invalidateLeafletInIframe(iframe), 300);
+                    };
                     mapContainer.appendChild(iframe);
                     
                     const link = document.createElement('a');
@@ -1185,9 +1222,6 @@
                 const existingContent = modalMapDesc.innerHTML;
                 modalMapDesc.innerHTML = descHtml + existingContent;
             }
-            
-            modal.classList.add('active');
-            document.body.style.overflow = 'hidden';
         }
 
         function closeModal() {
