@@ -814,7 +814,12 @@
                     if (!files || files.length === 0) return null;
                 } else {
                     const response = await fetch(`${API_BASE}/contents/${dirName}`);
-                    if (!response.ok) return null;
+                    if (!response.ok) {
+                        if (isGitHubPagesPreview()) {
+                            return await probeMapFileWithoutApi(dirName);
+                        }
+                        return null;
+                    }
                     files = await response.json();
                 }
 
@@ -902,10 +907,17 @@
                         return { file: topLevelChoice.file, extension: topLevelChoice.extension };
                     }
                 }
+
+                if (isGitHubPagesPreview()) {
+                    return await probeMapFileWithoutApi(dirName);
+                }
                 
                 return null;
             } catch (error) {
                 console.error(`Error finding map in ${dirName}:`, error);
+                if (isGitHubPagesPreview()) {
+                    return await probeMapFileWithoutApi(dirName);
+                }
                 return null;
             }
         }
@@ -991,9 +1003,29 @@
             return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0';
         }
 
+        function isGitHubPagesPreview() {
+            return window.location.hostname.endsWith('.github.io');
+        }
+
+        function toSiteRelativeUrl(path) {
+            const encodedPath = path
+                .split('/')
+                .map(segment => encodeURIComponent(segment))
+                .join('/');
+            const basePath = window.location.pathname.endsWith('/')
+                ? window.location.pathname
+                : window.location.pathname.replace(/\/[^/]*$/, '/');
+            return `${basePath}${encodedPath}`;
+        }
+
         function getRenderableMapUrl(file, extension) {
             if (isLocalPreview()) {
                 return toLocalUrl(file.path);
+            }
+
+            if (isGitHubPagesPreview()) {
+                // Prefer same-origin files on GitHub Pages for better iframe compatibility.
+                return toSiteRelativeUrl(file.path);
             }
 
             if (extension === 'html') {
@@ -1256,13 +1288,23 @@
                 return;
             }
             
-            mapCountEl.textContent = `${directories.length} maps`;
             grid.innerHTML = '';
+            let renderedCount = 0;
             
             for (const dir of directories) {
                 const mapInfo = await findMapFile(dir.name);
+                if (!mapInfo) {
+                    continue;
+                }
                 const card = createMapCard(dir.name, mapInfo);
                 grid.appendChild(card);
+                renderedCount += 1;
+            }
+
+            mapCountEl.textContent = `${renderedCount} maps`;
+
+            if (renderedCount === 0) {
+                grid.innerHTML = '<div class="error-message">No map files found.</div>';
             }
         }
 
