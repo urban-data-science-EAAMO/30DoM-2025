@@ -180,6 +180,25 @@
             display: block;
         }
 
+        .map-image-loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #eef2f7 0%, #dde6f0 100%);
+            color: #355070;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-align: center;
+            padding: 0.75rem;
+            z-index: 2;
+        }
+
+        .map-image-loading.hidden {
+            display: none;
+        }
+
         .map-info {
             padding: 1rem 0.5rem;
         }
@@ -286,6 +305,25 @@
             height: 450px;
             border: none;
             pointer-events: all;
+        }
+
+        .modal-map-loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #eef2f7 0%, #dde6f0 100%);
+            color: #355070;
+            font-size: 1rem;
+            font-weight: 600;
+            text-align: center;
+            padding: 1rem;
+            z-index: 2;
+        }
+
+        .modal-map-loading.hidden {
+            display: none;
         }
 
         .modal-info {
@@ -1021,6 +1059,66 @@
             return file.download_url || toJsDelivrUrl(file.path);
         }
 
+        async function getContentLengthForUrl(url) {
+            try {
+                let response = await fetch(url, { method: 'HEAD' });
+                if (!response.ok || response.status === 405) {
+                    response = await fetch(url, {
+                        method: 'GET',
+                        headers: { Range: 'bytes=0-0' }
+                    });
+                }
+
+                if (!response.ok) return null;
+                const contentLength = parseInt(response.headers.get('content-length') || '', 10);
+                return Number.isNaN(contentLength) ? null : contentLength;
+            } catch (error) {
+                return null;
+            }
+        }
+
+        async function probeMapFileWithoutApi(dirName) {
+            if (!isGitHubPagesPreview()) return null;
+
+            const candidates = [];
+            for (const ext of CONFIG.mapExtensionPriority) {
+                candidates.push({ path: `${dirName}/map.${ext}`, extension: ext });
+                candidates.push({ path: `${dirName}/MAP.${ext}`, extension: ext });
+            }
+
+            const commonSubdirCandidates = [
+                { path: `${dirName}/map/map.png`, extension: 'png' },
+                { path: `${dirName}/map/maps.png`, extension: 'png' },
+                { path: `${dirName}/map/maps.svg`, extension: 'svg' },
+                { path: `${dirName}/map/gif.gif`, extension: 'gif' },
+                { path: `${dirName}/map/gif_sm.gif`, extension: 'gif' },
+                { path: `${dirName}/map/map.pdf`, extension: 'pdf' }
+            ];
+
+            for (const c of commonSubdirCandidates) {
+                if (CONFIG.mapExtensionPriority.includes(c.extension)) {
+                    candidates.push(c);
+                }
+            }
+
+            for (const candidate of candidates) {
+                const url = toSiteRelativeUrl(candidate.path);
+                const size = await getContentLengthForUrl(url);
+                if (size !== null && size > 50) {
+                    return {
+                        file: {
+                            path: candidate.path,
+                            download_url: url,
+                            size: size
+                        },
+                        extension: candidate.extension
+                    };
+                }
+            }
+
+            return null;
+        }
+
         function invalidateLeafletInIframe(iframe) {
             try {
                 const iframeWindow = iframe.contentWindow;
@@ -1073,11 +1171,22 @@
                 const fileUrl = getRenderableMapUrl(file, extension);
                 
                 if (extension === 'html') {
+                    const loadingPlaceholder = document.createElement('div');
+                    loadingPlaceholder.className = 'map-image-loading';
+                    loadingPlaceholder.textContent = 'Loading interactive map...';
+                    imageContainer.appendChild(loadingPlaceholder);
+
                     const iframe = document.createElement('iframe');
                     iframe.src = fileUrl;
                     iframe.title = `Map: ${dirName}`;
                     iframe.loading = 'lazy';
                     iframe.referrerPolicy = 'no-referrer';
+                    iframe.onload = () => {
+                        loadingPlaceholder.classList.add('hidden');
+                    };
+                    iframe.onerror = () => {
+                        loadingPlaceholder.textContent = 'Interactive map failed to load';
+                    };
                     imageContainer.appendChild(iframe);
                 } else if (['mp4', 'm4v', 'webm'].includes(extension)) {
                     const video = document.createElement('video');
@@ -1173,15 +1282,24 @@
                 const fileUrl = getRenderableMapUrl(file, extension);
                 
                 if (extension === 'html') {
+                    const loadingPlaceholder = document.createElement('div');
+                    loadingPlaceholder.className = 'modal-map-loading';
+                    loadingPlaceholder.textContent = 'Loading interactive map...';
+                    mapContainer.appendChild(loadingPlaceholder);
+
                     const iframe = document.createElement('iframe');
                     iframe.src = fileUrl;
                     iframe.title = `Map: ${dirName}`;
                     iframe.loading = 'eager';
                     iframe.referrerPolicy = 'no-referrer';
                     iframe.onload = () => {
+                        loadingPlaceholder.classList.add('hidden');
                         // Folium/Leaflet maps can render with wrong bounds when loaded in modal contexts.
                         invalidateLeafletInIframe(iframe);
                         setTimeout(() => invalidateLeafletInIframe(iframe), 300);
+                    };
+                    iframe.onerror = () => {
+                        loadingPlaceholder.textContent = 'Interactive map failed to load';
                     };
                     mapContainer.appendChild(iframe);
                     
