@@ -800,7 +800,12 @@
                     if (!files || files.length === 0) return null;
                 } else {
                     const response = await fetch(`${API_BASE}/contents/${dirName}`);
-                    if (!response.ok) return null;
+                    if (!response.ok) {
+                        if (isGitHubPagesPreview()) {
+                            return await probeMapFileWithoutApi(dirName);
+                        }
+                        return null;
+                    }
                     files = await response.json();
                 }
 
@@ -888,10 +893,17 @@
                         return { file: topLevelChoice.file, extension: topLevelChoice.extension };
                     }
                 }
+
+                if (isGitHubPagesPreview()) {
+                    return await probeMapFileWithoutApi(dirName);
+                }
                 
                 return null;
             } catch (error) {
                 console.error(`Error finding map in ${dirName}:`, error);
+                if (isGitHubPagesPreview()) {
+                    return await probeMapFileWithoutApi(dirName);
+                }
                 return null;
             }
         }
@@ -1007,6 +1019,70 @@
                 return toJsDelivrUrl(file.path);
             }
             return file.download_url || toJsDelivrUrl(file.path);
+        }
+
+        async function getContentLengthForUrl(url) {
+            try {
+                let response = await fetch(url, { method: 'HEAD' });
+                if (!response.ok || response.status === 405) {
+                    response = await fetch(url, {
+                        method: 'GET',
+                        headers: { Range: 'bytes=0-0' }
+                    });
+                }
+
+                if (!response.ok) return null;
+                const contentLength = parseInt(response.headers.get('content-length') || '', 10);
+                return Number.isNaN(contentLength) ? null : contentLength;
+            } catch (error) {
+                return null;
+            }
+        }
+
+        async function probeMapFileWithoutApi(dirName) {
+            const candidates = [];
+
+            for (const ext of CONFIG.mapExtensionPriority) {
+                candidates.push({ path: `${dirName}/map.${ext}`, extension: ext });
+                candidates.push({ path: `${dirName}/MAP.${ext}`, extension: ext });
+            }
+
+            const extraCandidates = [
+                { path: `${dirName}/map/map.png`, extension: 'png' },
+                { path: `${dirName}/map/MAP.png`, extension: 'png' },
+                { path: `${dirName}/map/map.gif`, extension: 'gif' },
+                { path: `${dirName}/map/gif.gif`, extension: 'gif' },
+                { path: `${dirName}/map/gif_sm.gif`, extension: 'gif' },
+                { path: `${dirName}/map/maps.png`, extension: 'png' },
+                { path: `${dirName}/map/maps.svg`, extension: 'svg' },
+                { path: `${dirName}/map/map.pdf`, extension: 'pdf' }
+            ];
+
+            for (const c of extraCandidates) {
+                if (CONFIG.mapExtensionPriority.includes(c.extension)) {
+                    candidates.push(c);
+                }
+            }
+
+            for (const candidate of candidates) {
+                const url = toSiteRelativeUrl(candidate.path);
+                const size = await getContentLengthForUrl(url);
+                if (size === null || size <= 50) {
+                    continue;
+                }
+                if (size > 50) {
+                    return {
+                        file: {
+                            path: candidate.path,
+                            download_url: url,
+                            size: size > 0 ? size : undefined
+                        },
+                        extension: candidate.extension
+                    };
+                }
+            }
+
+            return null;
         }
 
         async function isUsableMapFile(file) {
