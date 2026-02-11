@@ -600,6 +600,13 @@
             '2025-11-10 - Air': '2025-11-10 - Air/air.png'
         };
 
+        const FORCED_MAP_FILES = {
+            '2025-11-03 - Polygons': {
+                path: '2025-11-03 - Polygons/map/maps.png',
+                extension: 'png'
+            }
+        };
+
         const API_BASE = `https://api.github.com/repos/${CONFIG.repoOwner}/${CONFIG.repoName}`;
         const RAW_BASE = `https://raw.githubusercontent.com/${CONFIG.repoOwner}/${CONFIG.repoName}/${CONFIG.branch}`;
 
@@ -837,6 +844,18 @@
 
         async function findMapFile(dirName) {
             try {
+                const forcedMap = FORCED_MAP_FILES[dirName];
+                if (forcedMap) {
+                    const forcedFile = {
+                        type: 'file',
+                        name: forcedMap.path.split('/').pop(),
+                        path: forcedMap.path
+                    };
+                    if (await isUsableMapFile(forcedFile)) {
+                        return { file: forcedFile, extension: forcedMap.extension };
+                    }
+                }
+
                 let files = [];
 
                 if (isLocalPreview()) {
