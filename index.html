@@ -553,7 +553,7 @@
             branch: repoConfig.branch,
             introFile: 'introduction.md',
             signupFile: 'signup.csv',
-            mapExtensionPriority: ['html', 'mp4', 'm4v', 'webm', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'svg']
+            mapExtensionPriority: ['html', 'mp4', 'm4v', 'webm', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'pdf']
         };
 
         const API_BASE = `https://api.github.com/repos/${CONFIG.repoOwner}/${CONFIG.repoName}`;
@@ -681,7 +681,27 @@
         }
 
         async function getRepositoryContents() {
+            const toDirectoryListFromSignup = () => {
+                const entries = Object.entries(challengeData)
+                    .map(([date, info]) => {
+                        const challengeName = (info && info.name ? info.name : 'Map').replace(/:/g, '-');
+                        return { type: 'dir', name: `${date} - ${challengeName}` };
+                    })
+                    .sort((a, b) => a.name.localeCompare(b.name));
+                return entries;
+            };
+
             try {
+                if (isLocalPreview()) {
+                    const rootEntries = await listLocalDirectory('');
+                    const localDirs = rootEntries
+                        .filter(item => item.type === 'dir' && /^\d{4}-\d{2}-\d{2}/.test(item.name))
+                        .sort((a, b) => a.name.localeCompare(b.name));
+                    if (localDirs.length > 0) {
+                        return localDirs;
+                    }
+                }
+
                 const response = await fetch(`${API_BASE}/contents`);
                 if (!response.ok) throw new Error('Failed to fetch');
                 const contents = await response.json();
@@ -693,16 +713,63 @@
                 return mapDirs.sort((a, b) => a.name.localeCompare(b.name));
             } catch (error) {
                 console.error('Error:', error);
+                const fallbackDirs = toDirectoryListFromSignup();
+                return fallbackDirs.length > 0 ? fallbackDirs : [];
+            }
+        }
+
+        async function listLocalDirectory(path) {
+            try {
+                const normalizedPath = path
+                    ? `/${path.split('/').map(segment => encodeURIComponent(segment)).join('/')}/`
+                    : '/';
+                const response = await fetch(normalizedPath);
+                if (!response.ok) return [];
+
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const anchors = Array.from(doc.querySelectorAll('a[href]'));
+
+                const entries = [];
+                for (const a of anchors) {
+                    const href = a.getAttribute('href');
+                    if (!href || href === '../' || href.startsWith('?') || href.startsWith('#')) {
+                        continue;
+                    }
+
+                    const decoded = decodeURIComponent(href);
+                    const isDir = decoded.endsWith('/');
+                    const trimmed = decoded.replace(/\/$/, '');
+                    const name = trimmed.split('/').pop();
+                    if (!name || name === '..') continue;
+
+                    entries.push({
+                        type: isDir ? 'dir' : 'file',
+                        name,
+                        path: path ? `${path}/${name}` : name
+                    });
+                }
+
+                return entries;
+            } catch (error) {
+                console.error(`Error listing local directory ${path}:`, error);
                 return [];
             }
         }
 
         async function findMapFile(dirName) {
             try {
-                const response = await fetch(`${API_BASE}/contents/${dirName}`);
-                if (!response.ok) return null;
-                
-                const files = await response.json();
+                let files = [];
+
+                if (isLocalPreview()) {
+                    files = await listLocalDirectory(dirName);
+                    if (!files || files.length === 0) return null;
+                } else {
+                    const response = await fetch(`${API_BASE}/contents/${dirName}`);
+                    if (!response.ok) return null;
+                    files = await response.json();
+                }
 
                 const getExt = (name) => {
                     const parts = name.toLowerCase().split('.');
@@ -753,24 +820,40 @@
                 
                 const topLevelChoice = selectBestFile(files);
                 if (topLevelChoice && topLevelChoice.isExactMapName) {
-                    return { file: topLevelChoice.file, extension: topLevelChoice.extension };
+                    if (await isUsableMapFile(topLevelChoice.file)) {
+                        return { file: topLevelChoice.file, extension: topLevelChoice.extension };
+                    }
                 }
 
                 // 3) Last fallback: look in a common subdirectory used by some challenge folders.
                 const mapSubdir = files.find(f => f.type === 'dir' && f.name.toLowerCase() === 'map');
                 if (mapSubdir) {
-                    const subResponse = await fetch(`${API_BASE}/contents/${dirName}/${mapSubdir.name}`);
-                    if (subResponse.ok) {
-                        const subFiles = await subResponse.json();
+                    if (isLocalPreview()) {
+                        const subFiles = await listLocalDirectory(`${dirName}/${mapSubdir.name}`);
                         const subChoice = selectBestFile(subFiles);
                         if (subChoice) {
-                            return { file: subChoice.file, extension: subChoice.extension };
+                            if (await isUsableMapFile(subChoice.file)) {
+                                return { file: subChoice.file, extension: subChoice.extension };
+                            }
+                        }
+                    } else {
+                        const subResponse = await fetch(`${API_BASE}/contents/${dirName}/${mapSubdir.name}`);
+                        if (subResponse.ok) {
+                            const subFiles = await subResponse.json();
+                            const subChoice = selectBestFile(subFiles);
+                            if (subChoice) {
+                                if (await isUsableMapFile(subChoice.file)) {
+                                    return { file: subChoice.file, extension: subChoice.extension };
+                                }
+                            }
                         }
                     }
                 }
 
                 if (topLevelChoice) {
-                    return { file: topLevelChoice.file, extension: topLevelChoice.extension };
+                    if (await isUsableMapFile(topLevelChoice.file)) {
+                        return { file: topLevelChoice.file, extension: topLevelChoice.extension };
+                    }
                 }
                 
                 return null;
@@ -868,6 +951,30 @@
                 return toJsDelivrUrl(file.path);
             }
             return file.download_url || toJsDelivrUrl(file.path);
+        }
+
+        async function isUsableMapFile(file) {
+            if (!file) return false;
+
+            if (typeof file.size === 'number') {
+                return file.size > 50;
+            }
+
+            if (isLocalPreview() && file.path) {
+                try {
+                    const response = await fetch(toLocalUrl(file.path), { method: 'HEAD' });
+                    if (!response.ok) return false;
+                    const contentLength = parseInt(response.headers.get('content-length') || '', 10);
+                    if (!Number.isNaN(contentLength)) {
+                        return contentLength > 50;
+                    }
+                } catch (error) {
+                    console.error(`Error validating local file ${file.path}:`, error);
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         function createMapCard(dirName, mapInfo) {
