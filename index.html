@@ -577,6 +577,39 @@
                 .replace(/<\/h([1-3])><\/p>/g, '</h$1>');
         }
 
+        function removeMembersSection(markdown) {
+            const lines = markdown.split('\n');
+            const cleaned = [];
+            let skippingMembersDetails = false;
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                const isMembersHeading =
+                    /^\*\*members\*\*\s*:?\s*/i.test(trimmed) ||
+                    /^members\s*:?\s*/i.test(trimmed);
+
+                if (isMembersHeading) {
+                    skippingMembersDetails = true;
+                    continue;
+                }
+
+                if (skippingMembersDetails) {
+                    if (!trimmed) {
+                        skippingMembersDetails = false;
+                    }
+                    continue;
+                }
+
+                if (/^no one signed up yet!?$/i.test(trimmed)) {
+                    continue;
+                }
+
+                cleaned.push(line);
+            }
+
+            return cleaned.join('\n').replace(/\n{3,}/g, '\n\n');
+        }
+
         function parseCSV(csv) {
             const lines = csv.split('\n');
             const headers = lines[0].split(',').map(h => h.trim());
@@ -867,17 +900,20 @@
             try {
                 let response = await fetch(`${RAW_BASE}/${dirName}/DESCRIPTION.md`);
                 if (response.ok) {
-                    return await response.text();
+                    const text = await response.text();
+                    return removeMembersSection(text);
                 }
                 
                 response = await fetch(`${RAW_BASE}/${dirName}/BLUESKY.md`);
                 if (response.ok) {
-                    return await response.text();
+                    const text = await response.text();
+                    return removeMembersSection(text);
                 }
 
                 response = await fetch(`${RAW_BASE}/${dirName}/README.md`);
                 if (response.ok) {
-                    return await response.text();
+                    const text = await response.text();
+                    return removeMembersSection(text);
                 }
                 
                 return null;
@@ -1057,7 +1093,7 @@
             const challengeInfo = challengeData[date];
             if (challengeInfo) {
                 modalThemeDesc.textContent = challengeInfo.description;
-                
+
                 if (challengeInfo.members && challengeInfo.members.length > 0) {
                     let authorsHtml = '<h3>Contributors</h3><div class="modal-authors-list">';
                     for (const member of challengeInfo.members) {
