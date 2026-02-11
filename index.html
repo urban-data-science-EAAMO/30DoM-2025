@@ -503,7 +503,7 @@
             </div>
             <div class="meta-info">
                 <span id="map-count">Loading maps...</span>
-                <span><a href="" id="repo-link" target="_blank">View Repository</a></span>
+                <span><a href="https://github.com/urban-data-science-eaamo/30DoM-2025" id="repo-link" target="_blank" rel="noopener noreferrer">View Repository</a></span>
             </div>
         </header>
 
@@ -553,7 +553,7 @@
             branch: repoConfig.branch,
             introFile: 'introduction.md',
             signupFile: 'signup.csv',
-            mapExtensionPriority: ['html', 'mp4', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'svg']
+            mapExtensionPriority: ['html', 'mp4', 'm4v', 'webm', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'svg']
         };
 
         const API_BASE = `https://api.github.com/repos/${CONFIG.repoOwner}/${CONFIG.repoName}`;
@@ -570,7 +570,7 @@
                 .replace(/^# (.*$)/gim, '<h1>$1</h1>')
                 .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
                 .replace(/\*(.*?)\*/gim, '<em>$1</em>')
-                .replace(/\[(.*?)\]\((.*?)\)/gim, '<a href="$2" target="_blank">$1</a>')
+                .replace(/\[(.*?)\]\((.*?)\)/gim, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
                 .replace(/\n\n/g, '</p><p>')
                 .replace(/^(.+)$/gim, '<p>$1</p>')
                 .replace(/<\/p><p><h/g, '</p><h')
@@ -703,12 +703,74 @@
                 if (!response.ok) return null;
                 
                 const files = await response.json();
-                
-                for (const ext of CONFIG.mapExtensionPriority) {
-                    let mapFile = files.find(f => f.name.toLowerCase() === `map.${ext.toLowerCase()}`);
-                    if (mapFile) {
-                        return { file: mapFile, extension: ext };
+
+                const getExt = (name) => {
+                    const parts = name.toLowerCase().split('.');
+                    return parts.length > 1 ? parts[parts.length - 1] : '';
+                };
+
+                const isRenderableFile = (file) => {
+                    if (!file || file.type !== 'file') return false;
+                    const ext = getExt(file.name);
+                    if (!CONFIG.mapExtensionPriority.includes(ext)) return false;
+                    // Skip empty or truncated placeholders (e.g., 2-byte files).
+                    return typeof file.size !== 'number' || file.size > 50;
+                };
+
+                const selectBestFile = (fileList) => {
+                    // 1) Prefer explicit map.<ext> files in configured extension priority.
+                    for (const ext of CONFIG.mapExtensionPriority) {
+                        const mapFile = fileList.find(f =>
+                            isRenderableFile(f) &&
+                            f.name.toLowerCase() === `map.${ext.toLowerCase()}`
+                        );
+                        if (mapFile) {
+                            return { file: mapFile, extension: ext, isExactMapName: true };
+                        }
                     }
+
+                    // 2) Fallback to best available renderable file in this directory.
+                    const candidates = fileList
+                        .filter(isRenderableFile)
+                        .map(file => {
+                            const ext = getExt(file.name);
+                            const priority = CONFIG.mapExtensionPriority.indexOf(ext);
+                            const name = file.name.toLowerCase();
+                            const mapNameBoost = name.includes('map') ? 0 : 1;
+                            const sizeBoost = typeof file.size === 'number' ? -file.size : 0;
+                            return { file, extension: ext, priority, mapNameBoost, sizeBoost };
+                        })
+                        .sort((a, b) =>
+                            a.priority - b.priority ||
+                            a.mapNameBoost - b.mapNameBoost ||
+                            a.sizeBoost - b.sizeBoost
+                        );
+
+                    return candidates.length > 0
+                        ? { file: candidates[0].file, extension: candidates[0].extension, isExactMapName: false }
+                        : null;
+                };
+                
+                const topLevelChoice = selectBestFile(files);
+                if (topLevelChoice && topLevelChoice.isExactMapName) {
+                    return { file: topLevelChoice.file, extension: topLevelChoice.extension };
+                }
+
+                // 3) Last fallback: look in a common subdirectory used by some challenge folders.
+                const mapSubdir = files.find(f => f.type === 'dir' && f.name.toLowerCase() === 'map');
+                if (mapSubdir) {
+                    const subResponse = await fetch(`${API_BASE}/contents/${dirName}/${mapSubdir.name}`);
+                    if (subResponse.ok) {
+                        const subFiles = await subResponse.json();
+                        const subChoice = selectBestFile(subFiles);
+                        if (subChoice) {
+                            return { file: subChoice.file, extension: subChoice.extension };
+                        }
+                    }
+                }
+
+                if (topLevelChoice) {
+                    return { file: topLevelChoice.file, extension: topLevelChoice.extension };
                 }
                 
                 return null;
@@ -726,6 +788,11 @@
                 }
                 
                 response = await fetch(`${RAW_BASE}/${dirName}/BLUESKY.md`);
+                if (response.ok) {
+                    return await response.text();
+                }
+
+                response = await fetch(`${RAW_BASE}/${dirName}/README.md`);
                 if (response.ok) {
                     return await response.text();
                 }
@@ -770,6 +837,39 @@
             }
         }
 
+        function toJsDelivrUrl(path) {
+            const encodedPath = path
+                .split('/')
+                .map(segment => encodeURIComponent(segment))
+                .join('/');
+            return `https://cdn.jsdelivr.net/gh/${CONFIG.repoOwner}/${CONFIG.repoName}@${CONFIG.branch}/${encodedPath}`;
+        }
+
+        function toLocalUrl(path) {
+            const encodedPath = path
+                .split('/')
+                .map(segment => encodeURIComponent(segment))
+                .join('/');
+            return `/${encodedPath}`;
+        }
+
+        function isLocalPreview() {
+            const hostname = window.location.hostname;
+            return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0';
+        }
+
+        function getRenderableMapUrl(file, extension) {
+            if (isLocalPreview()) {
+                return toLocalUrl(file.path);
+            }
+
+            if (extension === 'html') {
+                // raw.githubusercontent.com can fail to render reliably in iframes for interactive HTML maps.
+                return toJsDelivrUrl(file.path);
+            }
+            return file.download_url || toJsDelivrUrl(file.path);
+        }
+
         function createMapCard(dirName, mapInfo) {
             const card = document.createElement('div');
             card.className = 'map-card';
@@ -779,14 +879,16 @@
             
             if (mapInfo) {
                 const { file, extension } = mapInfo;
-                const fileUrl = file.download_url;
+                const fileUrl = getRenderableMapUrl(file, extension);
                 
                 if (extension === 'html') {
                     const iframe = document.createElement('iframe');
                     iframe.src = fileUrl;
                     iframe.title = `Map: ${dirName}`;
+                    iframe.loading = 'lazy';
+                    iframe.referrerPolicy = 'no-referrer';
                     imageContainer.appendChild(iframe);
-                } else if (extension === 'mp4') {
+                } else if (['mp4', 'm4v', 'webm'].includes(extension)) {
                     const video = document.createElement('video');
                     video.src = fileUrl;
                     video.autoplay = true;
@@ -806,7 +908,7 @@
             } else {
                 const placeholder = document.createElement('div');
                 placeholder.className = 'map-placeholder';
-                placeholder.textContent = 'No map file found';
+                placeholder.textContent = 'No map submitted yet';
                 imageContainer.appendChild(placeholder);
             }
             
@@ -853,7 +955,7 @@
                     let authorsHtml = '<h3>Contributors</h3><div class="modal-authors-list">';
                     for (const member of challengeInfo.members) {
                         if (member.url) {
-                            authorsHtml += `<span><a href="${member.url}" target="_blank">${member.name}</a></span>`;
+                            authorsHtml += `<span><a href="${member.url}" target="_blank" rel="noopener noreferrer">${member.name}</a></span>`;
                         } else {
                             authorsHtml += `<span>${member.name}</span>`;
                         }
@@ -869,25 +971,29 @@
             }
             
             mapContainer.innerHTML = '';
+            mapContainer.onclick = null;
             modalMapDesc.innerHTML = '';
             
             if (mapInfo) {
                 const { file, extension } = mapInfo;
-                const fileUrl = file.download_url;
+                const fileUrl = getRenderableMapUrl(file, extension);
                 
                 if (extension === 'html') {
                     const iframe = document.createElement('iframe');
                     iframe.src = fileUrl;
                     iframe.title = `Map: ${dirName}`;
+                    iframe.loading = 'eager';
+                    iframe.referrerPolicy = 'no-referrer';
                     mapContainer.appendChild(iframe);
                     
                     const link = document.createElement('a');
                     link.href = fileUrl;
                     link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
                     link.className = 'interactive-link';
                     link.textContent = 'Open Interactive Map →';
                     modalMapDesc.appendChild(link);
-                } else if (extension === 'mp4') {
+                } else if (['mp4', 'm4v', 'webm'].includes(extension)) {
                     const video = document.createElement('video');
                     video.src = fileUrl;
                     video.controls = true;
@@ -923,6 +1029,11 @@
                     
                     mapContainer.onclick = () => window.open(fileUrl, '_blank');
                 }
+            } else {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'map-placeholder';
+                placeholder.textContent = 'No map submitted yet for this challenge';
+                mapContainer.appendChild(placeholder);
             }
             
             const description = await getMapDescription(dirName);
