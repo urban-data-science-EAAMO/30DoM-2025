@@ -1021,6 +1021,80 @@
             return file.download_url || toJsDelivrUrl(file.path);
         }
 
+        let interactivePreviewObserver = null;
+
+        function ensureInteractivePreviewObserver() {
+            if (interactivePreviewObserver || !('IntersectionObserver' in window)) {
+                return interactivePreviewObserver;
+            }
+
+            interactivePreviewObserver = new IntersectionObserver((entries, observer) => {
+                for (const entry of entries) {
+                    if (!entry.isIntersecting) continue;
+
+                    const iframe = entry.target;
+                    const src = iframe.dataset.src;
+                    const fallbackSrc = iframe.dataset.fallbackSrc;
+                    if (src) {
+                        setIframeSrcWithFallback(iframe, src, fallbackSrc);
+                    }
+                    observer.unobserve(iframe);
+                }
+            }, {
+                root: null,
+                rootMargin: '300px 0px',
+                threshold: 0.01
+            });
+
+            return interactivePreviewObserver;
+        }
+
+        function setIframeSrcWithFallback(iframe, src, fallbackSrc) {
+            const primary = src;
+            const fallback = fallbackSrc && fallbackSrc !== src ? fallbackSrc : null;
+            const existingOnLoad = iframe.onload;
+            const existingOnError = iframe.onerror;
+
+            let loaded = false;
+            let switched = false;
+            let timerId = null;
+
+            const markLoaded = () => {
+                loaded = true;
+                if (timerId) {
+                    clearTimeout(timerId);
+                    timerId = null;
+                }
+            };
+
+            iframe.onload = (event) => {
+                markLoaded();
+                if (typeof existingOnLoad === 'function') {
+                    existingOnLoad.call(iframe, event);
+                }
+            };
+
+            iframe.onerror = (event) => {
+                if (typeof existingOnError === 'function') {
+                    existingOnError.call(iframe, event);
+                }
+                if (loaded || switched || !fallback) return;
+                switched = true;
+                iframe.src = fallback;
+            };
+
+            if (fallback) {
+                timerId = setTimeout(() => {
+                    if (!loaded && !switched) {
+                        switched = true;
+                        iframe.src = fallback;
+                    }
+                }, 12000);
+            }
+
+            iframe.src = primary;
+        }
+
         function invalidateLeafletInIframe(iframe) {
             try {
                 const iframeWindow = iframe.contentWindow;
@@ -1074,10 +1148,18 @@
                 
                 if (extension === 'html') {
                     const iframe = document.createElement('iframe');
-                    iframe.src = fileUrl;
                     iframe.title = `Map: ${dirName}`;
                     iframe.loading = 'lazy';
                     iframe.referrerPolicy = 'no-referrer';
+                    iframe.dataset.src = fileUrl;
+                    iframe.dataset.fallbackSrc = toJsDelivrUrl(file.path);
+                    iframe.src = 'about:blank';
+                    const observer = ensureInteractivePreviewObserver();
+                    if (observer) {
+                        observer.observe(iframe);
+                    } else {
+                        setIframeSrcWithFallback(iframe, fileUrl, toJsDelivrUrl(file.path));
+                    }
                     imageContainer.appendChild(iframe);
                 } else if (['mp4', 'm4v', 'webm'].includes(extension)) {
                     const video = document.createElement('video');
@@ -1174,7 +1256,6 @@
                 
                 if (extension === 'html') {
                     const iframe = document.createElement('iframe');
-                    iframe.src = fileUrl;
                     iframe.title = `Map: ${dirName}`;
                     iframe.loading = 'eager';
                     iframe.referrerPolicy = 'no-referrer';
@@ -1183,6 +1264,7 @@
                         invalidateLeafletInIframe(iframe);
                         setTimeout(() => invalidateLeafletInIframe(iframe), 300);
                     };
+                    setIframeSrcWithFallback(iframe, fileUrl, toJsDelivrUrl(file.path));
                     mapContainer.appendChild(iframe);
                     
                     const link = document.createElement('a');
